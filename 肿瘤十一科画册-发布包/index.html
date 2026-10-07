@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>肿瘤十一科 · 智慧精准放疗电子画册</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23349a84'/><path d='M16 8v16M8 16h16' stroke='%23ffffff' stroke-width='3' stroke-linecap='round'/></svg>">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+<style>
+:root{
+  --green:#349a84;
+  --green-deep:#1f6b5c;
+  --green-darker:#13473d;
+  --gold:#c9a24b;
+  --gold-soft:#e4cd8c;
+  --paper:#f5faf8;
+  --ink:#21413b;
+  --ink-soft:#5d7770;
+  --line:#d9e9e3;
+  --serif:"Noto Serif SC",serif;
+  --sans:"Noto Sans SC",system-ui,sans-serif;
+  --denom:17; /* 手机版与打印版均为 17 页 */
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  font-family:var(--sans);
+  color:var(--ink);
+  background:linear-gradient(135deg,#e7f0ec,#d3e2db);
+  overflow:hidden;
+}
+.book{
+  position:relative;
+  width:100%;
+  max-width:560px;
+  height:100vh;
+  margin:0 auto;
+  background:var(--paper);
+  overflow:hidden;
+  box-shadow:0 0 60px rgba(20,60,52,.18);
+  counter-reset:pg; /* 页码计数器；display:none 页不计数 */
+}
+.page{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  padding:0;
+  opacity:0;visibility:hidden;
+  transform:translateX(40px);
+  transition:opacity .5s ease,transform .5s ease,visibility .5s;
+  background:linear-gradient(165deg,var(--green-darker) 0%,var(--green-deep) 55%,var(--green) 100%);
+  color:#fff;
+  overflow:hidden;
+  counter-increment:pg;
+}
+.page.active{opacity:1;visibility:visible;transform:translateX(0);z-index:2;}
+.page.prev{transform:translateX(-40px);}
+/* 内页（除封面/封底）整体浅色纸底，不要上下大块深色带 */
+.page:not(.cover):not(.backcover){background:linear-gradient(180deg,#f5faf8 0%,#eef6f1 100%);color:var(--ink);}
+
+/* ===== 内页：整页铺满、紧凑页眉页脚 ===== */
+.p-top{flex:none;display:flex;justify-content:space-between;align-items:baseline;
+  padding:15px 18px 0;}
+.kicker-en{font-size:10px;letter-spacing:2.5px;color:var(--green);text-transform:uppercase;font-weight:500;}
+.kicker-cn{font-family:var(--serif);font-size:19px;font-weight:700;color:var(--green-darker);margin-top:2px;letter-spacing:2px;}
+.pn{font-family:var(--serif);font-weight:600;display:inline-flex;align-items:center;}
+.pn::before{content:counter(pg,decimal-leading-zero);font-size:15px;color:var(--gold);letter-spacing:1px;line-height:1;}
+.pn::after{content:"17";font-size:10px;color:var(--ink-soft);letter-spacing:.5px;line-height:1;padding-left:7px;margin-left:2px;border-left:1px solid var(--gold-soft);}
+.slide-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:0;min-height:0;background:none;}
+.slide-card{width:100%;background:transparent;color:var(--ink);
+  border-radius:0;box-shadow:none;overflow:hidden;
+  display:flex;flex-direction:column;position:relative;}
+.p-body{padding:16px 18px;display:flex;flex-direction:column;justify-content:flex-start;gap:12px;}
+.p-foot{flex:none;padding:6px 18px 42px;}
+.foot-rule{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.foot-rule .gline{height:2px;width:26px;background:var(--gold);}
+.foot-rule .nline{flex:1;height:1px;background:rgba(52,154,132,.28);}
+.foot-rule .cross{width:10px;height:10px;position:relative;flex:none;}
+.foot-rule .cross::before,.foot-rule .cross::after{content:"";position:absolute;background:var(--gold);}
+.foot-rule .cross::before{left:50%;top:0;bottom:0;width:1.4px;transform:translateX(-50%);}
+.foot-rule .cross::after{top:50%;left:0;right:0;height:1.4px;transform:translateY(-50%);}
+.foot-name{font-size:10.5px;letter-spacing:1.6px;color:var(--ink-soft);text-align:center;}
+
+/* ===== 内页大字组件（手机390宽，中老年清晰） ===== */
+.sc-title{font-family:var(--serif);font-weight:700;color:var(--green-darker);font-size:23px;line-height:1.25;letter-spacing:.5px;}
+.sc-sub{font-size:13px;color:var(--ink-soft);margin-top:3px;line-height:1.4;letter-spacing:.3px;}
+.sc-bar{width:40px;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold-soft));border-radius:2px;margin:9px 0 11px;flex:none;}
+.sc-lead{font-size:15.5px;line-height:1.78;color:var(--ink);letter-spacing:.2px;}
+.sc-lead b{color:var(--green-deep);}
+/* 科室介绍：手机精简句 / 打印完整句 */
+.about-mid{margin-top:9px;}
+.about-full{display:none;}
+@media print{
+  .about-short{display:none;}
+  .about-full{display:inline;}
+  .about-mid{margin-top:0;}
+}
+.grid{display:grid;gap:9px;}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;}
+.sstat{background:#f4faf7;border:1px solid var(--line);border-radius:10px;padding:11px 6px;text-align:center;}
+.sstat b{font-family:var(--serif);font-size:19px;color:var(--gold);font-weight:700;display:block;line-height:1.1;}
+.sstat span{font-size:11px;color:var(--ink-soft);margin-top:4px;display:block;line-height:1.35;}
+.dotlist{list-style:none;}
+.dotlist li{position:relative;padding-left:16px;font-size:15px;line-height:1.6;color:var(--ink);margin-bottom:9px;}
+.dotlist li::before{content:"";position:absolute;left:2px;top:8px;width:6px;height:6px;border-radius:50%;background:var(--gold);}
+.dotlist li b{color:var(--green-deep);}
+.note{background:#eaf5f1;border:1px solid #d3e7e0;border-radius:10px;padding:11px 14px;}
+.note p{font-size:13.5px;line-height:1.7;margin:0;color:var(--ink);}
+.note b{color:var(--green-deep);}
+
+/* 微创/技术 2列小卡 */
+.mc-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.mc{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 13px;display:flex;align-items:center;gap:11px;}
+.mc-ic{flex:none;width:48px;height:29px;}
+.mc-ic svg{width:100%;height:100%;display:block;}
+.mc-txt{flex:1;min-width:0;}
+.mc-t{font-size:14px;font-weight:700;color:var(--green-deep);line-height:1.2;}
+.mc-d{font-size:11.5px;color:var(--ink-soft);line-height:1.5;margin-top:3px;}
+
+/* 13-16 页主插图：手机淡水印，PDF 随版面放大 */
+.pagehero{position:absolute;right:-4px;bottom:-4px;width:200px;opacity:.08;pointer-events:none;z-index:1;}
+.p-body{position:relative;z-index:2;}
+
+/* 流程步骤 */
+.proc-list{display:flex;flex-direction:column;gap:12px;}
+.proc-row{display:flex;gap:12px;align-items:center;}
+.proc-n{flex:none;width:27px;height:27px;border-radius:50%;background:var(--green);color:#fff;
+  font-size:13px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;}
+.proc-n.g{background:var(--gold);}
+.proc-txt{font-size:14px;color:var(--ink);line-height:1.4;}
+.proc-txt b{color:var(--green-deep);}
+
+/* 就诊行 */
+.ct-list{display:flex;flex-direction:column;gap:12px;}
+.ct-row{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+  display:flex;align-items:center;gap:11px;}
+.ct-row.hl{border-color:#e4cd8c;background:#fffdf5;}
+.ct-l{flex:none;font-size:12px;color:var(--gold);font-weight:700;letter-spacing:1px;}
+.ct-ic{flex:none;width:34px;height:20px;}
+.ct-ic svg{width:100%;height:100%;display:block;}
+.ct-v{font-size:14px;color:var(--ink);line-height:1.35;}
+.ct-v.phone{font-family:var(--serif);font-size:24px;color:var(--green-deep);font-weight:700;letter-spacing:1px;}
+
+/* TOMO 主推：线稿与实拍并排居中、大小协调 */
+.tomo-stage{display:flex;align-items:center;justify-content:center;gap:16px;padding:4px 0;}
+.tomo-stage .tomo-line{display:flex;align-items:center;justify-content:center;min-width:0;}
+.tomo-stage .tomo-line svg{height:112px;width:auto;max-width:100%;display:block;}
+.tomo-stage .tomo-photo{flex:none;width:140px;max-height:140px;object-fit:contain;align-self:center;}
+.tomo-stats .sstat{padding:9px 4px;}
+.tomo-stats .sstat b{font-size:18px;}
+.tomo-stats .sstat span{font-size:11px;margin-top:3px;}
+
+/* 设备三列 */
+.devrow3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch;}
+.devrow3 .d{background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 7px 11px;
+  text-align:center;display:flex;flex-direction:column;align-items:center;height:100%;box-sizing:border-box;}
+.devrow3 .ic{width:100%;height:30px;flex:none;}
+.devrow3 .ic svg{width:100%;height:100%;display:block;}
+.devrow3 .pic{width:100%;height:104px;object-fit:contain;margin:5px 0;background:linear-gradient(180deg,#fcfdfd,#eef5f2);border-radius:7px;}
+.devrow3 .nm{font-size:13.5px;font-weight:700;color:var(--green-deep);line-height:1.2;}
+.devrow3 .nm .bd{display:inline-block;font-size:9px;background:#eaf5f1;color:var(--green-deep);border-radius:7px;padding:1px 5px;margin-top:2px;}
+.devrow3 .ds{font-size:11px;color:var(--ink-soft);line-height:1.45;margin-top:4px;}
+
+/* 专家页 手机：横向行（与PDF doc-feature一致），3行/2行垂直均分 */
+/* 专家页 手机：横向行，固定块高502px(3×160+2×11)顶部对齐，四页首卡平齐 */
+.exprows{display:flex;flex-direction:column;justify-content:flex-start;gap:11px;height:523px;}
+.exprow{display:flex;gap:12px;align-items:stretch;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 12px;height:167px;}
+.exprow .av{flex:none;width:96px;aspect-ratio:3/4;object-fit:cover;object-position:top center;border-radius:9px;background:linear-gradient(180deg,#eef6f3,#e2efe9);}
+.exprow .info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;}
+.exprow .nmrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.exprow .nm{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--green-darker);line-height:1.1;}
+.exprow .etag{font-size:10px;color:#fff;background:var(--green);padding:2px 7px;border-radius:9px;font-weight:500;line-height:1.3;white-space:nowrap;}
+.exprow .etag.gold{background:var(--gold);}
+.exprow .title{font-size:12px;color:var(--gold);font-weight:600;margin-top:3px;letter-spacing:.3px;line-height:1.3;}
+.exprow .line{font-size:13px;color:var(--ink-soft);line-height:1.48;margin-top:3px;}
+.exprow .line.good{color:var(--green-deep);}
+.exprow .line.cv{font-size:11px;line-height:1.4;margin-top:2px;}
+
+/* ===== 封面 ===== */
+.cover{
+  background:
+    radial-gradient(120% 80% at 50% -10%,rgba(201,162,75,.28),transparent 55%),
+    linear-gradient(165deg,var(--green-darker) 0%,var(--green-deep) 52%,var(--green) 100%);
+  color:#fff;padding:0;justify-content:space-between;align-items:center;text-align:center;
+}
+.cover::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:22px 22px;pointer-events:none;}
+.cover-brand{position:relative;z-index:2;width:88%;padding-top:max(3.6vh,20px);transform:translateX(23px);}
+.cover-brand img{width:100%;height:auto;display:block;margin:0 auto;}
+.cover-mid{position:relative;z-index:2;text-align:center;width:100%;margin-top:auto;}
+.cover-main{display:inline-block;font-family:var(--serif);font-size:32px;font-weight:900;letter-spacing:4px;
+  white-space:nowrap;line-height:1.1;
+  background:linear-gradient(180deg,#fdf3d8,var(--gold-soft) 55%,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.cover-tags{display:flex;justify-content:center;gap:8px;margin-top:11px;}
+.cover-tags span{font-size:10px;letter-spacing:1.4px;border:1px solid rgba(228,205,140,.55);color:var(--gold-soft);padding:4px 11px;border-radius:20px;}
+.cover-scene{position:relative;z-index:2;width:100%;margin:16px 0 auto;}
+.cover-scene img{width:100%;display:block;height:auto;}
+.swipe-hint{position:absolute;bottom:30vh;left:50%;transform:translateX(-50%);font-size:9.5px;letter-spacing:2px;color:rgba(255,255,255,.72);z-index:15;animation:bob 1.8s ease-in-out infinite;}
+@keyframes bob{0%,100%{transform:translate(-50%,0);}50%{transform:translate(-50%,5px);}}
+
+/* ===== 封底 ===== */
+.backcover{
+  background:
+    radial-gradient(120% 70% at 50% -10%,rgba(201,162,75,.3),transparent 55%),
+    linear-gradient(165deg,var(--green-darker),var(--green-deep) 55%,var(--green));
+  color:#fff;justify-content:center;align-items:center;text-align:center;padding:0;
+}
+.backcover::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:22px 22px;pointer-events:none;}
+.backcover .inner{position:relative;z-index:2;width:100%;padding:0 8%;}
+.backcover .bc-logo{width:100%;}
+.backcover .bc-logo img{width:100%;display:block;}
+.backcover .bc-line{width:50px;height:1.5px;background:var(--gold);margin:22px auto 16px;}
+.backcover .bc-txt{font-family:var(--serif);font-size:16px;letter-spacing:3px;color:#fdf3d8;}
+.backcover .bc-tel{font-size:12.5px;letter-spacing:1.5px;color:var(--gold-soft);margin-top:10px;}
+
+/* ===== 翻页控件 ===== */
+.nav{position:absolute;bottom:1.4vh;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:16px;z-index:20;pointer-events:none;}
+.nav button{pointer-events:auto;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.85);color:var(--green-deep);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(31,107,92,.12);transition:.2s;}
+.nav button:active{transform:scale(.92);}
+.dots{display:flex;gap:6px;pointer-events:auto;}
+.dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4);cursor:pointer;transition:.25s;}
+.dots i.on{background:var(--gold);width:17px;border-radius:4px;}
+.nav.cover-nav button{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.3);color:#fff;}
+.nav.cover-nav .dots i{background:rgba(255,255,255,.35);}
+.nav.cover-nav .dots i.on{background:var(--gold-soft);}
+
+/* ===== 打印版专用专家详细卡（按390宽设计，PDF随zoom放大） ===== */
+.doc-feature{display:flex;gap:11px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 12px;box-shadow:0 6px 16px rgba(31,107,92,.06);}
+.doc-feature + .doc-feature{margin-top:10px;}
+.doc-photo{flex:none;width:72px;height:96px;border-radius:9px;object-fit:cover;object-position:top center;background:linear-gradient(180deg,#eef6f3,#e2efe9);}
+.doc-info{flex:1;min-width:0;}
+.doc-name{font-family:var(--serif);font-size:17px;font-weight:700;color:var(--green-darker);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.doc-role{font-size:9.5px;color:#fff;background:var(--green);padding:2px 8px;border-radius:10px;font-weight:500;letter-spacing:.3px;}
+.doc-role.gold{background:var(--gold);}
+.doc-title{font-size:10.5px;color:var(--gold);margin-top:4px;letter-spacing:.3px;font-weight:600;}
+.doc-spec{font-size:10.5px;color:var(--ink-soft);line-height:1.6;margin-top:5px;}
+.doc-spec.good{color:var(--green-deep);}
+/* 打印专家页 4/5/6/7：固定块高588px+顶部对齐，四页首卡相对Y完全相等 */
+.page.expert-print .p-body{height:588px;gap:0;}
+.page.expert-print .doc-feature + .doc-feature{margin-top:10px;}
+
+/* 三期效果图 · 大图主体（无白卡，完整不裁切） */
+.phase-hero{width:100%;text-align:center;}
+.phase-hero img{height:322px;width:auto;max-width:100%;display:inline-block;border-radius:14px;
+  box-shadow:0 12px 26px rgba(31,107,92,.18);}
+.phase-tags{display:flex;justify-content:center;flex-wrap:wrap;gap:7px;}
+.phase-tags span{font-size:11px;letter-spacing:.5px;color:#8a6d2c;
+  background:linear-gradient(180deg,#fbf4de,#f1e2b6);border:1px solid #e4d09a;border-radius:20px;padding:4px 12px;}
+.hosp-body{gap:6px;padding:13px 13px 14px;}
+.hosp-body .sc-bar{margin:4px 0 6px;}
+.hosp-stats{grid-template-columns:repeat(3,1fr);gap:8px;}
+.hosp-stats .sstat{background:linear-gradient(180deg,#fbf4de,#f1e2b6);border:1px solid #e3cf95;border-radius:11px;padding:9px 4px;}
+.hosp-stats .sstat b{color:#97762b;font-size:20px;}
+.hosp-stats .sstat span{color:#7c6a3f;font-size:10.5px;}
+.hosp-dots{margin:2px 0 0;}
+.hosp-dots li{font-size:12.5px;line-height:1.4;margin-bottom:4px;padding-left:15px;}
+.hosp-dots li::before{top:6px;}
+
+/* 隐藏专用页 */
+.expert-print{display:none;}
+
+/* ===== 打印 / PDF：手机390布局等比高清放大到 1080×1920（9:16，矢量） ===== */
+@page{size:1080px 1920px;margin:0;}
+@media print{
+  :root{ --denom:17; }
+  html,body{height:auto;overflow:visible;background:#fff;}
+  /* 以 390 逻辑宽布局，整体 zoom 到 1080 宽；每页逻辑高 693 → 1920 */
+  .book{max-width:none;width:390px;height:auto;box-shadow:none;zoom:2.76923;}
+  .page{position:relative;opacity:1 !important;visibility:visible !important;transform:none;
+    width:390px;height:693px;padding:0;overflow:hidden;
+    page-break-after:always;break-after:page;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,#f5faf8,#eef6f1) !important;color:var(--ink);}
+  .page:last-child{page-break-after:auto;}
+  .nav,.swipe-hint{display:none !important;}
+  .expert-screen{display:none !important;}
+  .expert-print{display:flex !important;}
+  /* 封面/封底保持深绿 */
+  .page.cover{background:radial-gradient(120% 80% at 50% -10%,rgba(201,162,75,.28),transparent 55%),linear-gradient(165deg,var(--green-darker) 0%,var(--green-deep) 52%,var(--green) 100%) !important;}
+  .page.backcover{background:radial-gradient(120% 70% at 50% -10%,rgba(201,162,75,.3),transparent 55%),linear-gradient(165deg,var(--green-darker),var(--green-deep) 55%,var(--green)) !important;}
+  /* 专家打印页：三张卡纵向均分铺满 */
+  /* 专家打印页：固定块高588px、顶部对齐、不伸缩，margin:auto 0 垂直居中 */
+  .page.expert-print .p-body{margin:auto 0;justify-content:flex-start;height:588px;flex:none;gap:0;}
+  /* 打印无底部导航，页脚留舒适下边距，使内容光学居中、上下留白对称 */
+  .p-foot{padding-bottom:34px;}
+}
+</style>
+</head>
+<body>
+<div class="book" id="book">
+
+<!-- ============ 第1页 · 封面 ============ -->
+<section class="page cover active" data-nav="cover">
+  <div class="cover-brand">
+    <img src="assets/building/cover-logo.png" alt="广州中医药大学金沙洲医院 · 肿瘤十一科">
+  </div>
+  <div class="cover-mid">
+    <div class="cover-main">智慧精准放疗</div>
+    <div class="cover-tags">
+      <span>无创 · 微创</span><span>精准定位</span><span>MDT会诊</span>
+    </div>
+  </div>
+  <div class="cover-scene">
+    <img src="assets/building/banner.jpg" alt="医院门诊楼全景">
+  </div>
+  <div class="swipe-hint">左滑翻页 →</div>
+</section>
+
+<!-- ============ 科室介绍 ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">About Us</div><div class="kicker-cn">科室介绍</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body">
+    <div class="sc-title">依托顶尖平台 · 走精准放疗之路</div>
+    <div class="sc-bar"></div>
+    <p class="sc-lead">依托医院<b>肿瘤放射治疗中心</b>，按国内三甲肿瘤专科及国际标准建设的现代化<b>中澳合作</b>放疗中心，广州市重点民生工程。</p>
+    <p class="sc-lead about-mid"><span class="about-short">王洋教授领衔，依 NCCN/CSCO 指南做 MDT 规范化管理。</span><span class="about-full">中心由澳籍华人<b>王洋教授</b>领衔的资深团队把关，依据美国 NCCN 及国内 CSCO 诊疗指南，采用国际先进的 <b>MDT 多学科诊疗</b>与规范化全病程管理。</span></p>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:6px;margin:5px 0;">
+      <div class="sstat"><b>5位1体</b><span>诊疗·预防·科研<br>培训·远程会诊</span></div>
+      <div class="sstat"><b>MDT</b><span>多学科会诊<br>个性化方案</span></div>
+      <div class="sstat"><b>每次</b><span>图像引导<br>动态调方案</span></div>
+    </div>
+    <div class="note"><p>肿瘤十一病区由放疗医师、物理师、技师与护士协同配合，让患者<b>不出国门</b>，就能享受规范、高品质的诊疗服务。</p></div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 医院实力（三期） ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">Hospital</div><div class="kicker-cn">医院实力</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body hosp-body">
+    <div class="sc-title">三级综合医院 · 坚实可靠的依托</div>
+    <div class="sc-bar"></div>
+    <div class="phase-hero">
+      <img src="assets/building/phase3.png" alt="医院三期综合楼效果图">
+    </div>
+    <div class="phase-tags">
+      <span>医院三期综合楼</span><span>新增500间VIP病房</span><span>约6万㎡使用空间</span>
+    </div>
+    <div class="grid hosp-stats">
+      <div class="sstat"><b>1500</b><span>张床位</span></div>
+      <div class="sstat"><b>19</b><span>间层流手术室</span></div>
+      <div class="sstat"><b>48</b><span>张重症监护床</span></div>
+    </div>
+    <ul class="dotlist hosp-dots">
+      <li><b>非营利性三级综合医院</b>，120急救、互联网医院</li>
+      <li>医保工伤生育定点，<b>异地就医直接结算</b></li>
+      <li>国家药监局 <b>GCP</b>，硕博培养基地</li>
+    </ul>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 手机版 专家①（3人：王洋/王甦/吴希诗） ============ -->
+<section class="page expert-screen exp3row">
+  <div class="p-top"><div><div class="kicker-en">Experts 1/4</div><div class="kicker-cn">专家介绍</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body">
+    <div class="sc-title">资深专家团队 · ①</div>
+    <div class="sc-bar"></div>
+    <div class="exprows">
+      <div class="exprow">
+        <img class="av" src="assets/doctors/wangyang.png" alt="王洋">
+        <div class="info">
+          <div class="nmrow"><span class="nm">王 洋</span><span class="etag gold">副院长</span></div>
+          <div class="title">放射治疗学科带头人</div>
+          <div class="line good">擅长：放疗中心整体规划、医学物理与精准放疗质控体系建设。</div>
+          <div class="line cv">澳籍华人，在澳大利亚肿瘤领域工作30余年；中国首批赴美瓦里安进修的医学物理师，拥有40年海内外放疗经验。</div>
+        </div>
+      </div>
+      <div class="exprow">
+        <img class="av" src="assets/doctors/wangsu.png" alt="王甦">
+        <div class="info">
+          <div class="nmrow"><span class="nm">王 甦</span><span class="etag">病区主任</span></div>
+          <div class="title">主任医师 · 医学博士</div>
+          <div class="line good">擅长：全身实体瘤个体化精准诊疗，顽固性癌痛、癌性胸腹水管控。</div>
+          <div class="line cv">深耕肿瘤临床、教学、科研三十余年，获省部级科技进步奖多项，牵头多中心课题4项。</div>
+        </div>
+      </div>
+      <div class="exprow">
+        <img class="av" src="assets/doctors/wuxishi.png" alt="吴希诗">
+        <div class="info">
+          <div class="nmrow"><span class="nm">吴希诗</span><span class="etag">副主任医师</span></div>
+          <div class="title">原山东省济南市人民医院放疗科主任</div>
+          <div class="line good">擅长：影像诊断、精准放疗与伽玛刀治疗，肺、乳腺、消化道及头颈肿瘤。</div>
+          <div class="line cv">原放疗科主任兼影像中心副主任，任山东抗癌协会放射肿瘤分会等多个专委会副主委。</div>
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 手机版 专家②（3人：吴少雄/郭遂群/郑俏聪） ============ -->
+<section class="page expert-screen exp3row">
+  <div class="p-top"><div><div class="kicker-en">Experts 2/4</div><div class="kicker-cn">专家介绍</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body">
+    <div class="sc-title">资深专家团队 · ②</div>
+    <div class="sc-bar"></div>
+    <div class="exprows">
+      <div class="exprow">
+        <img class="av" src="assets/doctors/wushaoxiong.png" alt="吴少雄">
+        <div class="info">
+          <div class="nmrow"><span class="nm">吴少雄</span><span class="etag">主任医师</span></div>
+          <div class="title">主诊教授 · 硕士及联合博士导师</div>
+          <div class="line good">擅长：肿瘤精确放疗、立体定向放疗与综合治疗，肺、肝、头颈及神经肿瘤。</div>
+          <div class="line cv">原中山大学肿瘤防治中心放疗科主任医师，深耕临床42年，曾任广东省抗癌协会放疗专委会主委，获评岭南名医。</div>
+        </div>
+      </div>
+      <div class="exprow">
+        <img class="av" src="assets/doctors/guosuiqun.png" alt="郭遂群">
+        <div class="info">
+          <div class="nmrow"><span class="nm">郭遂群</span><span class="etag">特聘专家</span></div>
+          <div class="title">教授 · 主任医师 · 医学博士 · 博导</div>
+          <div class="line good">擅长：宫颈癌等复杂妇科肿瘤手术，及宫颈、内膜、卵巢肿瘤的综合治疗。</div>
+          <div class="line cv">原南方医科大学第三附属医院副院长、妇产科主任；承担省级以上课题7项，发表论文60余篇。</div>
+        </div>
+      </div>
+      <div class="exprow">
+        <img class="av" src="assets/doctors/zhengqiaocong.png" alt="郑俏聪">
+        <div class="info">
+          <div class="nmrow"><span class="nm">郑俏聪</span><span class="etag">主任医师</span></div>
+          <div class="title">医学硕士</div>
+          <div class="line good">擅长：鼻咽癌、头颈肿瘤放疗，肺、食管、肝癌及转移瘤的精准综合放疗。</div>
+          <div class="line cv">从事肿瘤临床二十余年，任广东省医学教育协会肿瘤学专委会常委，主持多个省市级立项。</div>
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 手机版 专家③（2人：纪跃庭/张润，居中） ============ -->
+<section class="page expert-screen exp3row">
+  <div class="p-top"><div><div class="kicker-en">Experts 3/4</div><div class="kicker-cn">专家介绍</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body">
+    <div class="sc-title">资深专家团队 · ③</div>
+    <div class="sc-bar"></div>
+    <div class="exprows">
+      <div class="exprow">
+        <img class="av" src="assets/doctors/jiyueting.png" alt="纪跃庭">
+        <div class="info">
+          <div class="nmrow"><span class="nm">纪跃庭</span><span class="etag">主任医师</span></div>
+          <div class="title">原伽马刀治疗中心主任</div>
+          <div class="line good">擅长：鼻咽、肺、肝、宫颈等实体瘤放疗，颅内肿瘤伽马刀及肿瘤热疗。</div>
+          <div class="line">从医25年，进修于天津医科大学、中国医学科学院附属肿瘤医院。</div>
+        </div>
+      </div>
+      <div class="exprow">
+        <img class="av" src="assets/doctors/zhangrun.png" alt="张润">
+        <div class="info">
+          <div class="nmrow"><span class="nm">张 润</span><span class="etag">副主任医师</span></div>
+          <div class="title">医学博士 · 硕导</div>
+          <div class="line good">擅长：脑膜瘤、胶质瘤等显微外科，垂体瘤、颅咽管瘤神经内镜微创手术。</div>
+          <div class="line">发表SCI论文20余篇，主持及参与多项国家自然科学基金。</div>
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 手机版 专家④（3人：彭晓敏/黄海清/陆佳豪） ============ -->
+<section class="page expert-screen">
+  <div class="p-top"><div><div class="kicker-en">Experts 4/4</div><div class="kicker-cn">专家介绍</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body">
+    <div class="sc-title">资深专家团队 · ④</div>
+    <div class="sc-bar"></div>
+    <div class="exprows">
+      <div class="exprow">
+        <img class="av" src="assets/doctors/pengxiaomin.png" alt="彭晓敏">
+        <div class="info">
+          <div class="nmrow"><span class="nm">彭晓敏</span><span class="etag">住院医师</span></div>
+          <div class="title">毕业于暨南大学第一临床学院</div>
+          <div class="line good">擅长：肺癌、乳腺癌、宫颈癌、鼻咽癌的放疗、化疗、靶向、免疫等综合治疗。</div>
+        </div>
+      </div>
+      <div class="exprow">
+        <img class="av" src="assets/doctors/huanghaiqing.jpg" alt="黄海清">
+        <div class="info">
+          <div class="nmrow"><span class="nm">黄海清</span><span class="etag gold">主治医师</span></div>
+          <div class="title">从事恶性肿瘤诊治十余年</div>
+          <div class="line good">擅长：各类恶性肿瘤放射治疗，放疗经验丰富，熟悉化疗、靶向、免疫治疗。</div>
+        </div>
+      </div>
+      <div class="exprow">
+        <img class="av" src="assets/doctors/lujiahao.jpg" alt="陆佳豪">
+        <div class="info">
+          <div class="nmrow"><span class="nm">陆佳豪</span><span class="etag">住院医师</span></div>
+          <div class="title">毕业于武汉大学临床医学专业</div>
+          <div class="line good">擅长：肺癌、食管癌、结直肠癌、宫颈癌的化疗、靶向、免疫等综合治疗。</div>
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 打印版 专家P4（王洋/王甦/吴希诗） ============ -->
+<section class="page expert-print exp3row">
+  <div class="p-top"><div><div class="kicker-en">Experts 1/4</div><div class="kicker-cn">专家介绍</div></div><div class="pn"></div></div>
+  <div class="p-body">
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/wangyang.png" alt="王洋">
+      <div class="doc-info">
+        <div class="doc-name">王 洋 <span class="doc-role gold">副院长</span></div>
+        <div class="doc-title">放射治疗学科带头人</div>
+        <div class="doc-spec good">擅长：放疗中心整体规划、医学物理与精准放疗质控体系建设。</div>
+        <div class="doc-spec">澳籍华人，在澳大利亚肿瘤领域工作30余年；中国第一代派往美国瓦里安进修的医学物理师，曾代表引进中国首台进口瓦里安高能医用直线加速器，拥有40年海内外放疗经验。</div>
+      </div>
+    </div>
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/wangsu.png" alt="王甦">
+      <div class="doc-info">
+        <div class="doc-name">王 甦 <span class="doc-role">病区主任</span></div>
+        <div class="doc-title">主任医师 · 医学博士</div>
+        <div class="doc-spec good">擅长：全身实体瘤个体化精准诊疗，对顽固性癌痛、难治性癌性胸腹水管控经验丰富。</div>
+        <div class="doc-spec">深耕肿瘤临床、教学、科研三十余年，担任多个国家级、省市级学术职务；获省部级科技进步奖多项，牵头多中心课题4项，发表论文10余篇。</div>
+      </div>
+    </div>
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/wuxishi.png" alt="吴希诗">
+      <div class="doc-info">
+        <div class="doc-name">吴希诗 <span class="doc-role">副主任医师</span></div>
+        <div class="doc-title">原山东省济南市人民医院放疗科主任</div>
+        <div class="doc-spec good">擅长：影像诊断、精准放疗与伽玛刀治疗，在肺、乳腺、消化道、头颈肿瘤的调强与立体定向放疗方面经验丰富。</div>
+        <div class="doc-spec">原任放疗科主任兼影像中心副主任，担任山东抗癌协会放射肿瘤分会等多个专委会副主委。</div>
+      </div>
+    </div>
+  </div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 打印版 专家P5（吴少雄/郭遂群/郑俏聪） ============ -->
+<section class="page expert-print exp3row">
+  <div class="p-top"><div><div class="kicker-en">Experts 2/4</div><div class="kicker-cn">专家介绍</div></div><div class="pn"></div></div>
+  <div class="p-body">
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/wushaoxiong.png" alt="吴少雄">
+      <div class="doc-info">
+        <div class="doc-name">吴少雄 <span class="doc-role">主任医师</span></div>
+        <div class="doc-title">主诊教授 · 硕士及联合博士导师</div>
+        <div class="doc-spec good">擅长：肿瘤精确放疗、立体定向放疗与综合治疗，对肺癌、肝癌、头颈及神经肿瘤经验丰富。</div>
+        <div class="doc-spec">中山大学附属肿瘤医院放疗科主任医师、十一科特聘专家，深耕临床42年；曾任广东省抗癌协会放疗专委会主委，2015年获评“岭南名医”。</div>
+      </div>
+    </div>
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/guosuiqun.png" alt="郭遂群">
+      <div class="doc-info">
+        <div class="doc-name">郭遂群 <span class="doc-role">特聘专家</span></div>
+        <div class="doc-title">教授 · 主任医师 · 医学博士 · 博导</div>
+        <div class="doc-spec good">擅长：宫颈癌根治术等复杂妇科肿瘤手术，及宫颈、子宫内膜、卵巢、外阴肿瘤的手术、放化疗与综合治疗。</div>
+        <div class="doc-spec">十一科特聘专家，原南方医科大学第三附属医院副院长、妇产科主任；获全国医药卫生系统先进个人等荣誉；承担省级以上课题7项，发表论文60余篇（SCI 20余篇）。</div>
+      </div>
+    </div>
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/zhengqiaocong.png" alt="郑俏聪">
+      <div class="doc-info">
+        <div class="doc-name">郑俏聪 <span class="doc-role">主任医师</span></div>
+        <div class="doc-title">医学硕士</div>
+        <div class="doc-spec good">擅长：鼻咽癌、头颈肿瘤放疗，肺、食管、肝癌及转移瘤的立体定向、适形调强与姑息放疗，及放化疗、靶向、免疫综合治疗。</div>
+        <div class="doc-spec">从事肿瘤临床二十余年，任广东省医学教育协会肿瘤学专委会常委等职，主持多个省市级立项，发表多篇国家级论文。</div>
+      </div>
+    </div>
+  </div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 打印版 专家P6（纪跃庭/张润） ============ -->
+<section class="page expert-print exp3row">
+  <div class="p-top"><div><div class="kicker-en">Experts 3/4</div><div class="kicker-cn">专家介绍</div></div><div class="pn"></div></div>
+  <div class="p-body">
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/jiyueting.png" alt="纪跃庭">
+      <div class="doc-info">
+        <div class="doc-name">纪跃庭 <span class="doc-role">主任医师</span></div>
+        <div class="doc-title">原伽马刀治疗中心主任</div>
+        <div class="doc-spec good">擅长：鼻咽、肺、肝、宫颈等实体瘤放疗，颅内肿瘤伽马刀治疗及肿瘤热疗、综合治疗。</div>
+        <div class="doc-spec">原佳木斯市肿瘤医院放疗科主任、伽马刀治疗中心主任，从医25年，进修于天津医科大学、中国医学科学院附属肿瘤医院。</div>
+      </div>
+    </div>
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/zhangrun.png" alt="张润">
+      <div class="doc-info">
+        <div class="doc-name">张 润 <span class="doc-role">副主任医师</span></div>
+        <div class="doc-title">医学博士 · 硕导</div>
+        <div class="doc-spec good">擅长：脑膜瘤、胶质瘤、听神经瘤、转移瘤等显微外科，垂体瘤、颅咽管瘤神经内镜微创手术及干细胞移植。</div>
+        <div class="doc-spec">广东省抗癌协会神经肿瘤专委会青年委员、省干细胞与再生医学协会理事；发表SCI论文20余篇，主持及参与多项国家自然科学基金。</div>
+      </div>
+    </div>
+  </div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 打印版 专家P7（彭晓敏/黄海清/陆佳豪） ============ -->
+<section class="page expert-print">
+  <div class="p-top"><div><div class="kicker-en">Experts 4/4</div><div class="kicker-cn">专家介绍</div></div><div class="pn"></div></div>
+  <div class="p-body">
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/pengxiaomin.png" alt="彭晓敏">
+      <div class="doc-info">
+        <div class="doc-name">彭晓敏 <span class="doc-role">住院医师</span></div>
+        <div class="doc-title">毕业于暨南大学第一临床学院</div>
+        <div class="doc-spec good">擅长：肺癌、乳腺癌、宫颈癌、鼻咽癌的放疗、化疗、靶向、免疫等个体化综合治疗。</div>
+      </div>
+    </div>
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/huanghaiqing.jpg" alt="黄海清">
+      <div class="doc-info">
+        <div class="doc-name">黄海清 <span class="doc-role gold">主治医师</span></div>
+        <div class="doc-title">从事恶性肿瘤诊治十余年</div>
+        <div class="doc-spec good">擅长：各类恶性肿瘤放射治疗，放疗经验丰富，熟悉化疗、靶向、免疫治疗。</div>
+      </div>
+    </div>
+    <div class="doc-feature">
+      <img class="doc-photo" src="assets/doctors/lujiahao.jpg" alt="陆佳豪">
+      <div class="doc-info">
+        <div class="doc-name">陆佳豪 <span class="doc-role">住院医师</span></div>
+        <div class="doc-title">毕业于武汉大学临床医学专业</div>
+        <div class="doc-spec good">擅长：肺癌、食管癌、结直肠癌、宫颈癌的化疗、靶向、免疫等个体化综合治疗。</div>
+      </div>
+    </div>
+  </div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ TOMO 主推 ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">TOMO Highlight</div><div class="kicker-cn">核心设备</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body">
+    <div class="sc-title">TOMO 螺旋断层 ·<br>一次照全的底气</div>
+    <div class="sc-bar"></div>
+    <div class="tomo-stage">
+      <div class="tomo-line">
+        <!-- TOMO 放大版绿色线稿（机架环+虚线螺旋弧+治疗床） -->
+        <svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="34" r="28"/><circle cx="50" cy="34" r="12"/><path d="M32 14 A28 28 0 0 1 68 54" stroke-dasharray="3.5 3.5"/><path d="M50 22 A12 12 0 0 1 50 46" stroke-dasharray="2.5 2.5"/><path d="M50 44 H108"/><path d="M42 60 h60"/><path d="M50 44 v16 M100 44 v16"/><rect x="58" y="40" width="34" height="5" rx="2.5"/></g></svg>
+      </div>
+      <img class="tomo-photo" src="assets/devices/tomo.png" alt="TOMO 螺旋断层放疗机">
+    </div>
+    <div class="grid tomo-stats" style="grid-template-columns:repeat(4,1fr);gap:6px;">
+      <div class="sstat"><b>约135cm</b><span>超长照射野</span></div>
+      <div class="sstat"><b>360°</b><span>螺旋断层</span></div>
+      <div class="sstat"><b>亚毫米</b><span>图像引导</span></div>
+      <div class="sstat"><b>每次CT</b><span>治疗前核对</span></div>
+    </div>
+    <div class="note" style="margin-top:6px;"><p>全脑全脊髓、全骨髓、全淋巴照射及多发转移瘤可<b>大范围一次照全</b>，单次约10–20分钟。</p></div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 放疗设备（一） ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">Radiotherapy 1/2</div><div class="kicker-cn">放疗设备</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body">
+    <div class="sc-title">国际水准的精准放疗设备</div>
+    <div class="sc-bar"></div>
+    <div class="devrow3">
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="74" y="50" width="28" height="15" rx="3"/><path d="M86 50 L74 33 L54 25"/><circle cx="86" cy="50" r="3.4"/><circle cx="74" cy="33" r="3.4"/><rect x="44" y="17" width="16" height="11" rx="2"/><path d="M20 62 H70"/><path d="M30 62 v5 M62 62 v5"/></g></svg></span>
+        <img class="pic" src="assets/devices/m6.png" alt="M6射波刀">
+        <div class="txt"><div class="nm">M6 射波刀<span class="bd">立体定向</span></div><div class="ds">机械臂实时追踪，亚毫米精度，1–8次完成</div></div>
+      </div>
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="13" width="12" height="45" rx="2"/><path d="M32 20 H66"/><rect x="54" y="20" width="15" height="12" rx="2"/><path d="M61.5 32 v8"/><path d="M30 57 H96"/><path d="M40 57 v5 M86 57 v5"/></g></svg></span>
+        <img class="pic" src="assets/devices/truebeam.png" alt="TrueBeam">
+        <div class="txt"><div class="nm">TrueBeam<span class="bd">影像引导</span></div><div class="ds">呼吸门控、超弧技术，治疗快、精度高</div></div>
+      </div>
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="48,8 68,16 76,34 68,52 48,60 28,52 20,34 28,16"/><circle cx="48" cy="34" r="12"/><path d="M48 46 H104"/><path d="M40 61 v4 M56 61 v4"/></g></svg></span>
+        <img class="pic" src="assets/devices/halcyon.png" alt="Halcyon">
+        <div class="txt"><div class="nm">Halcyon<span class="bd">高效舒适</span></div><div class="ds">双层多叶准直器，全程图像引导，安静舒适</div></div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 放疗设备（二） ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">Radiotherapy 2/2</div><div class="kicker-cn">放疗设备</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body">
+    <div class="sc-title">智能与近距离放疗设备</div>
+    <div class="sc-bar"></div>
+    <div class="devrow3">
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="48,9 71,22 71,46 48,59 25,46 25,22"/><circle cx="48" cy="34" r="11"/><path d="M48 45 H104"/><path d="M40 60 v4 M56 60 v4"/></g></svg></span>
+        <img class="pic" src="assets/devices/ethos.png" alt="Ethos">
+        <div class="txt"><div class="nm">Ethos 智速刀<span class="bd">AI自适应</span></div><div class="ds">按当天身体在线调方案，全程约15分钟</div></div>
+      </div>
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="18" width="30" height="41" rx="4"/><rect x="20" y="24" width="18" height="11" rx="1.5"/><path d="M44 34 C66 34 70 46 86 46"/><circle cx="90" cy="46" r="6"/><path d="M90 52 v6"/></g></svg></span>
+        <img class="pic" src="assets/devices/afterloader.png" alt="后装机">
+        <div class="txt"><div class="nm">三维后装机<span class="bd">近距离</span></div><div class="ds">放射源直达肿瘤旁，局部剂量高</div></div>
+      </div>
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M60 62 V44 A26 26 0 0 1 112 44 V62"/><circle cx="86" cy="44" r="9"/><path d="M14 46 H100"/><path d="M24 46 V62"/><path d="M18 62 H110"/><path d="M34 62 v5 M100 62 v5"/></g></svg></span>
+        <img class="pic" src="assets/devices/gammaknife.png" alt="伽马刀">
+        <div class="txt"><div class="nm">FreeGS-A 伽马刀<span class="bd">不开颅</span></div><div class="ds">旋转聚焦治颅内肿瘤，周期短、影响小</div></div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 影像设备 ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">Imaging</div><div class="kicker-cn">影像设备</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body">
+    <div class="sc-title">看得清，才能够照得准</div>
+    <div class="sc-bar"></div>
+    <div class="devrow3">
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="46" cy="31" r="24"/><circle cx="46" cy="31" r="11"/><path d="M30 31 H62"/><path d="M34 55 h24 l4 8 H30 z"/><path d="M46 43 H102"/><path d="M92 43 v6"/></g></svg></span>
+        <img class="pic" src="assets/devices/ct.png" alt="定位CT">
+        <div class="txt"><div class="nm">大孔径定位 CT<span class="bd">SOMATOM</span></div><div class="ds">高清成像、精准勾画肿瘤、模拟定位</div></div>
+      </div>
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="44" cy="33" r="25"/><circle cx="44" cy="33" r="11"/><path d="M28 56 h26 l4 8 H24 z"/><path d="M44 44 H108"/><circle cx="66" cy="29" r="1.6"/><circle cx="76" cy="38" r="1.6"/><circle cx="86" cy="28" r="1.6"/><path d="M96 21 v6 M93 24 h6"/></g></svg></span>
+        <img class="pic" src="assets/devices/petct.png" alt="PET-CT">
+        <div class="txt"><div class="nm">PET-CT<span class="bd">全身分子影像</span></div><div class="ds">一次扫描看全身代谢，查转移、评疗效</div></div>
+      </div>
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="9" width="50" height="53" rx="11"/><circle cx="45" cy="34" r="12"/><path d="M45 46 H106"/><path d="M18 62 H104"/><path d="M30 62 v5 M96 62 v5"/></g></svg></span>
+        <img class="pic" src="assets/devices/petmr.png" alt="PET-MR">
+        <div class="txt"><div class="nm">PET-MR<span class="bd">高端分子影像</span></div><div class="ds">磁共振与分子成像结合，软组织分辨高</div></div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 辅助设备 ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">Support</div><div class="kicker-cn">辅助设备</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card"><div class="p-body">
+    <div class="sc-title">多类设备协同 · 全方位护航</div>
+    <div class="sc-bar"></div>
+    <div class="devrow3">
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="40" width="92" height="6" rx="2"/><path d="M34 40 V31 A13 13 0 0 1 60 31 V40"/><ellipse cx="47" cy="31" rx="13" ry="5"/><rect x="20" y="46" width="34" height="16" rx="2"/><path d="M86 46 V62"/><path d="M14 62 H106"/><path d="M30 62 v5 M92 62 v5"/></g></svg></span>
+        <img class="pic" src="assets/devices/thermo.png" alt="热疗机">
+        <div class="txt"><div class="nm">智能靶向热疗<span class="bd">BSD-2000</span></div><div class="ds">热能配合放化疗，增强治疗效果</div></div>
+      </div>
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M60 16 C32 22 32 50 60 56"/><rect x="58" y="10" width="15" height="12" rx="2"/><rect x="58" y="54" width="15" height="11" rx="2"/><path d="M46 36 H20"/><rect x="10" y="42" width="15" height="18" rx="2"/><circle cx="14.5" cy="62" r="2.5"/><circle cx="20.5" cy="62" r="2.5"/><rect x="86" y="12" width="22" height="15" rx="2"/><path d="M97 27 V56"/><rect x="91" y="56" width="12" height="6" rx="1"/><path d="M8 64 H110"/></g></svg></span>
+        <img class="pic" src="assets/devices/carm.png" alt="C型臂">
+        <div class="txt"><div class="nm">C型臂 X光机<span class="bd">术中影像</span></div><div class="ds">移动透视，辅助介入与手术操作</div></div>
+      </div>
+      <div class="d">
+        <span class="ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="52" y="50" width="18" height="12" rx="2"/><path d="M61 50 V36"/><circle cx="61" cy="36" r="2.6"/><path d="M61 36 L49 21"/><path d="M61 36 L57 16"/><path d="M61 36 L65 16"/><path d="M61 36 L73 21"/><rect x="16" y="18" width="24" height="16" rx="2"/><path d="M28 34 V50"/><rect x="20" y="50" width="16" height="10" rx="2"/><path d="M8 64 H112"/><path d="M28 64 v4 M61 64 v4"/></g></svg></span>
+        <img class="pic" src="assets/devices/davinci.png" alt="达芬奇">
+        <div class="txt"><div class="nm">达芬奇手术机器人<span class="bd">微创</span></div><div class="ds">视野高清、操作灵活，切口小恢复快</div></div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 微创介入 ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">Intervention</div><div class="kicker-cn">微创介入</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card">
+  <img class="pagehero" src="assets/heroes/p13.png" alt="">
+  <div class="p-body">
+    <div class="sc-title">伤口只有针眼大的微创介入</div>
+    <div class="sc-bar"></div>
+    <p class="sc-lead">影像引导下细针/导管到达肿瘤，伤口针眼大小，<b>不用全麻、恢复快</b>，年纪大、身体弱也常能耐受。</p>
+    <div class="mc-grid">
+      <div class="mc"><span class="mc-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 36 C30 22 44 50 60 36 C76 22 90 50 106 36"/><path d="M50 56 C54 48 58 42 60 36"/><circle cx="46" cy="58" r="2"/><circle cx="54" cy="60" r="2"/><circle cx="62" cy="58" r="2"/></g></svg></span><div class="mc-txt"><div class="mc-t">动脉灌注/栓塞</div><div class="mc-d">直接给药并阻断肿瘤血供</div></div></div>
+      <div class="mc"><span class="mc-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M60 6 V30"/><path d="M52 12 L60 20 L68 12"/><rect x="56" y="30" width="8" height="22" rx="2"/><path d="M48 62 H72"/><path d="M60 52 v8"/></g></svg></span><div class="mc-txt"><div class="mc-t">冷冻消融·氩氦刀</div><div class="mc-d">极低温把肿瘤"冻死"</div></div></div>
+      <div class="mc"><span class="mc-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M60 6 V40"/><rect x="56" y="40" width="8" height="18" rx="2"/><path d="M48 62 H72"/><path d="M44 32 A20 20 0 0 1 76 32"/><path d="M50 40 A13 13 0 0 1 70 40"/></g></svg></span><div class="mc-txt"><div class="mc-t">射频/微波消融</div><div class="mc-d">高温把肿瘤"烫死"</div></div></div>
+      <div class="mc"><span class="mc-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="22" y="28" width="76" height="16" rx="8"/><circle cx="38" cy="36" r="2.2"/><circle cx="52" cy="36" r="2.2"/><circle cx="66" cy="36" r="2.2"/><circle cx="80" cy="36" r="2.2"/><path d="M60 44 V60"/></g></svg></span><div class="mc-txt"><div class="mc-t">碘125粒子</div><div class="mc-d">植入微放射源持续照射</div></div></div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 核心技术 ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">Technology</div><div class="kicker-cn">核心技术</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card">
+  <img class="pagehero" src="assets/heroes/p14.png" alt="">
+  <div class="p-body">
+    <div class="sc-title">精准放疗的技术体系</div>
+    <div class="sc-bar"></div>
+    <div class="mc-grid">
+      <div class="mc"><span class="mc-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="60" cy="40" r="4"/><path d="M60 40 L22 14"/><path d="M60 40 L98 14"/><path d="M60 40 L20 52"/><path d="M60 40 L100 52"/><path d="M60 40 L60 12"/><path d="M30 62 H90"/></g></svg></span><div class="mc-txt"><div class="mc-t">精准照射</div><div class="mc-d">IMRT/VMAT/SRS-SBRT/在线自适应，剂量贴合肿瘤</div></div></div>
+      <div class="mc"><span class="mc-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 50 C28 28 44 28 52 50"/><path d="M52 50 C60 60 70 60 78 50"/><path d="M78 50 C86 30 100 30 106 50"/><path d="M14 62 H110"/><path d="M34 50 q6 -10 12 0 q6 10 12 0"/></g></svg></span><div class="mc-txt"><div class="mc-t">运动肿瘤管理</div><div class="mc-d">4D-CT、呼吸门控、DIBH、射波刀追踪</div></div></div>
+      <div class="mc"><span class="mc-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="48" cy="34" r="20"/><circle cx="66" cy="34" r="20"/><circle cx="57" cy="48" r="16"/></g></svg></span><div class="mc-txt"><div class="mc-t">多模态影像融合</div><div class="mc-d">CT/MR/PET-CT/PET-MR 融合勾画靶区</div></div></div>
+      <div class="mc"><span class="mc-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="24" r="7"/><circle cx="60" cy="20" r="7"/><circle cx="90" cy="24" r="7"/><path d="M18 56 q0 -14 12 -14 q12 0 12 14"/><path d="M48 56 q0 -14 12 -14 q12 0 12 14"/><path d="M78 56 q0 -14 12 -14 q12 0 12 14"/></g></svg></span><div class="mc-txt"><div class="mc-t">MDT 与质控</div><div class="mc-d">每周多学科会诊，完备质控体系</div></div></div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 放疗流程 ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">Process</div><div class="kicker-cn">诊疗流程</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card">
+  <img class="pagehero" src="assets/heroes/p15.png" alt="">
+  <div class="p-body">
+    <div class="sc-title">放疗流程 · 一步一步讲清</div>
+    <div class="sc-bar"></div>
+    <div class="proc-list">
+      <div class="proc-row"><span class="proc-n">1</span><span class="proc-txt"><b>体位固定</b>　制作个性化固定装置</span></div>
+      <div class="proc-row"><span class="proc-n">2</span><span class="proc-txt"><b>CT模拟定位</b>　必要时结合4D-CT/MR/PET</span></div>
+      <div class="proc-row"><span class="proc-n">3</span><span class="proc-txt"><b>靶区勾画与计划</b>　医生勾画、物理师设计</span></div>
+      <div class="proc-row"><span class="proc-n">4</span><span class="proc-txt"><b>摆位与图像引导</b>　治疗前CT/CBCT核对</span></div>
+      <div class="proc-row"><span class="proc-n g">5</span><span class="proc-txt"><b>照射与复查</b>　单次十几分钟，定期动态调整</span></div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 就诊指南 ============ -->
+<section class="page">
+  <div class="p-top"><div><div class="kicker-en">Contact</div><div class="kicker-cn">就诊指南</div></div><div class="pn"></div></div>
+  <div class="slide-wrap"><div class="slide-card">
+  <img class="pagehero" src="assets/heroes/p16.png" alt="">
+  <div class="p-body">
+    <div class="sc-title">来院就诊 · 提前预约</div>
+    <div class="sc-bar"></div>
+    <div class="ct-list">
+      <div class="ct-row"><span class="ct-l">地址</span><span class="ct-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M60 10 C46 10 38 20 38 32 C38 48 60 62 60 62 C60 62 82 48 82 32 C82 20 74 10 60 10 Z"/><circle cx="60" cy="30" r="7"/></g></svg></span><span class="ct-v">白云区金沙洲礼传东街1号</span></div>
+      <div class="ct-row hl"><span class="ct-l">电话</span><span class="ct-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M34 18 C30 18 26 22 26 28 C26 48 48 66 68 66 C74 66 78 62 78 56 L78 48 L64 42 L56 50 C48 46 42 40 38 32 L46 26 Z"/></g></svg></span><span class="ct-v phone">19920500768</span></div>
+      <div class="ct-row"><span class="ct-l">交通</span><span class="ct-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="28" y="14" width="64" height="40" rx="8"/><path d="M36 30 H84"/><circle cx="42" cy="42" r="2.5"/><circle cx="78" cy="42" r="2.5"/><path d="M42 54 L36 62 M78 54 L84 62"/></g></svg></span><span class="ct-v">地铁6号线横沙站C出口；公交42/55/290/424等</span></div>
+      <div class="ct-row"><span class="ct-l">门诊</span><span class="ct-ic"><svg viewBox="0 0 120 72"><g fill="none" stroke="#349a84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="60" cy="36" r="24"/><path d="M60 22 V36 L72 44"/><path d="M60 12 v4 M60 56 v4 M36 36 h4 M80 36 h4"/></g></svg></span><span class="ct-v">8:00-12:00、14:00-17:00；无假日门诊，急诊24h</span></div>
+    </div>
+  </div></div></div>
+  <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
+</section>
+
+<!-- ============ 封底 ============ -->
+<section class="page backcover">
+  <div class="inner">
+    <div class="bc-logo">
+      <img src="assets/building/back-logo.png" alt="广州中医药大学金沙洲医院肿瘤十一科">
+    </div>
+    <div class="bc-line"></div>
+    <div class="bc-txt">智慧 · 精准 · 无创放疗</div>
+    <div class="bc-tel">肿瘤十一科 预约电话 19920500768</div>
+  </div>
+</section>
+
+
+</div>
+
+<div class="nav" id="nav">
+  <button id="prev" aria-label="上一页">‹</button>
+  <div class="dots" id="dots"></div>
+  <button id="next" aria-label="下一页">›</button>
+</div>
+
+<script>
+(function(){
+  var pages=Array.prototype.slice.call(document.querySelectorAll('.page'));
+  var nav=document.getElementById('nav');
+  var dotsWrap=document.getElementById('dots');
+  var hint=document.querySelector('.swipe-hint');
+  var cur=0,dots=[];
+  /* 圆点只枚举手机可见页：跳过打印专用专家页(.expert-print) */
+  var screenPages=pages.filter(function(p){return !p.classList.contains('expert-print');});
+  screenPages.forEach(function(p,i){
+    var d=document.createElement('i');
+    d.addEventListener('click',function(){go(i);});
+    dotsWrap.appendChild(d);
+    dots.push(d);
+  });
+  /* 屏幕显示用索引 -> 实际DOM索引 映射 */
+  function domIdx(ci){var p=screenPages[ci];return pages.indexOf(p);}
+  function go(i){
+    if(i<0||i>=screenPages.length)return;
+    var di=domIdx(i);
+    pages.forEach(function(p,idx){
+      p.classList.remove('active','prev');
+      if(idx===di)p.classList.add('active');
+      else if(idx<di)p.classList.add('prev');
+    });
+    dots.forEach(function(d,idx){d.classList.toggle('on',idx===i);});
+    nav.classList.toggle('cover-nav',i===0||screenPages[i].classList.contains('backcover'));
+    if(hint)hint.style.display=i===0?'block':'none';
+    cur=i;
+  }
+  document.getElementById('prev').addEventListener('click',function(){go(cur-1);});
+  document.getElementById('next').addEventListener('click',function(){go(cur+1);});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key==='PageDown')go(cur+1);
+    if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='PageUp')go(cur-1);
+  });
+  var sx=0,sy=0;
+  document.getElementById('book').addEventListener('touchstart',function(e){
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;
+  },{passive:true});
+  document.getElementById('book').addEventListener('touchend',function(e){
+    var dx=e.changedTouches[0].clientX-sx;
+    var dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){go(cur+(dx>0?-1:1));}
+  },{passive:true});
+  go(0);
+})();
+</script>
+</body>
+</html>
