@@ -149,6 +149,16 @@ body{
 .tomo-stats .sstat b{font-size:18px;}
 .tomo-stats .sstat span{font-size:11px;margin-top:3px;}
 
+/* TOMO 视频二维码横卡 */
+.video-qr{display:flex;align-items:center;gap:13px;background:#ffffff;border:1px solid #d3e7e0;
+  border-radius:12px;padding:10px 14px;box-shadow:0 6px 18px rgba(20,73,63,.08);}
+.video-qr>img{width:88px;height:88px;flex:none;border-radius:8px;display:block;background:#fff;}
+.video-qr .vq-txt{min-width:0;}
+.video-qr .vq-h{display:flex;align-items:center;gap:8px;font-size:15.5px;font-weight:700;color:var(--green-deep);letter-spacing:.3px;}
+.video-qr .play{flex:none;width:24px;height:24px;border-radius:50%;background:var(--green-deep);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;font-size:10px;line-height:1;padding-left:2px;}
+.video-qr .vq-s{margin-top:5px;font-size:12.5px;line-height:1.45;color:var(--ink-soft);}
+
 /* 设备三列 */
 .devrow3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch;}
 .devrow3 .d{background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 7px 11px;
@@ -639,6 +649,13 @@ body{
       <div class="sstat"><b>每次CT</b><span>治疗前核对</span></div>
     </div>
     <div class="note" style="margin-top:6px;"><p>全脑全脊髓、全骨髓、全淋巴照射及多发转移瘤可<b>大范围一次照全</b>，单次约10–20分钟。</p></div>
+    <div class="video-qr">
+      <img src="assets/video/tomo-qr.png" alt="TOMO刀治疗视频二维码">
+      <div class="vq-txt">
+        <div class="vq-h"><span class="play">▶</span>观看 TOMO 刀治疗视频</div>
+        <div class="vq-s">长按识别二维码，手机在线观看治疗全过程</div>
+      </div>
+    </div>
   </div></div></div>
   <div class="p-foot"><div class="foot-rule"><span class="gline"></span><span class="cross"></span><span class="nline"></span></div><div class="foot-name">广州中医药大学金沙洲医院 · 肿瘤十一科</div></div>
 </section>
